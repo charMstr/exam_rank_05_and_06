@@ -58,7 +58,7 @@ case some sort of `usleep()` calls are made between each write, and the binary i
 then killed half way, is to use the given function. So we will break down our
 calls to write() the same way, using `extract_message()` even if its completely dumb.
 
-##t_list structure:
+## t_list structure:
 The essential of the logic can be understood in the structure t\_list:
 
 ````
@@ -74,12 +74,13 @@ typedef struct s_list
 ````
 
 Each link of type t\_list represents a client connected to the server.
-`fd`: It stores the fd of the connexion socket with this specific client.
-`id`: It stores the client's id.
-`queued_msgs`: It stores the messages to be sent for a specific client. Any new
+
+- `fd`: It stores the fd of the connexion socket with this specific client.
+- `id`: It stores the client's id.
+- `queued_msgs`: It stores the messages to be sent for a specific client. Any new
 message is appended to this string.
-`extracted_msg`: It is the destination where we extract the next message from
-`queued_msgs`. The next message being the next line up to a '\n'.
+- `extracted_msg`: It is the destination where we extract the next message from
+- `queued_msgs`. The next message being the next line up to a '\n'.
 
 **NOTE1: if no '\n' is found, we directly atempt to write `queued_msgs`.**
 
