@@ -73,6 +73,7 @@ message is appended to this string.
 `queued_msgs`. The next message being the next line up to a '\n'.
 
 **NOTE1: if no '\n' is found, we directly atempt to write `queued_msgs`.**
+
 **NOTE2: each time extracted_msg or queued_msgs is fully written it is freed and
 reset to NULL. If its not fully sent over the network, we simply shift the bytes
 it contains**
