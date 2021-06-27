@@ -1,10 +1,10 @@
 # exam rank 06 @42
 
-##intro:
+## intro:
 This solution should answer to the exam rank 06 of school 42.
 See subject attached.
 
-##different files:
+## different files:
 The file given_main.c is provided when starting the exam.
 
 This program is about 342 lines when all the printfs and comments are stripped
@@ -13,7 +13,7 @@ off (see main.c).
 A version called main_with_printfs_and_comments.c has kept the remaining calls
 to printf() and sleep() and have kept the comments, for the sake of clarity.
 
-##more explanations:
+## more explanations:
 In this exercice, we are writing a server that should allow clients to connect,
 and forward any received message from a client, to all the other connected
 clients. There is no content-length, or chunk-encoding or likewise
