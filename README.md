@@ -1,17 +1,25 @@
 # exam rank 06 @42
 
+##intro:
 This solution should answer to the exam rank 06 of school 42.
 See subject attached.
 
-This program has remaining call to printf() and sleep() that need to be removed
-but have been left for the sake of clarity.
+##different files:
+The file given_main.c is provided when starting the exam.
 
+This program is about 342 lines when all the printfs and comments are stripped
+off (see main.c).
+
+A version called main_with_printfs_and_comments.c has kept the remaining calls
+to printf() and sleep() and have kept the comments, for the sake of clarity.
+
+##more explanations:
 In this exercice, we are writing a server that should allow clients to connect,
 and forward any received message from a client, to all the other connected
 clients. There is no content-length, or chunk-encoding or likewise
 implementation of such a protocol that could allow us to know the length of the
 message we are going to receive. The only hint we have is the given\_main.c
-given as start to get inspired, and it contains the function extract\_message()
+given as start to get inspired, and it contains the function `extract\_message()`
 already implemented:
 
 ```
@@ -46,10 +54,11 @@ int extract_message(char **buf, char **msg)
 The school checker seems to connect a few clients, then send messages and do a
 sort at the end of the pipe. ```... | sort ``` then all this is "diffed"
 The best way to make sure the outputs will remain the same with the checker,in
-case some sort of usleep() calls are made between each write, and the binary is
+case some sort of `usleep()` calls are made between each write, and the binary is
 then killed half way, is to use the given function. So we will break down our
-calls to write() the same way, even if its completely dumb.
+calls to write() the same way, using `extract_message()` even if its completely dumb.
 
+##t_list structure:
 The essential of the logic can be understood in the structure t\_list:
 
 ````
@@ -74,6 +83,6 @@ message is appended to this string.
 
 **NOTE1: if no '\n' is found, we directly atempt to write `queued_msgs`.**
 
-**NOTE2: each time extracted_msg or queued_msgs is fully written it is freed and
+**NOTE2: each time `extracted_msg` or `queued_msgs` is fully written it is freed and
 reset to NULL. If its not fully sent over the network, we simply shift the bytes
-it contains**
+it contains with `ft_memmove()`**
