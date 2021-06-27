@@ -4,6 +4,9 @@
 This solution should answer to the exam rank 06 of school 42.
 See subject attached.
 
+This solution takes in account the fact that messages dont necessarily get sent
+successfullly in one shot on the network.
+
 ## different files:
 The file given_main.c is provided when starting the exam.
 
