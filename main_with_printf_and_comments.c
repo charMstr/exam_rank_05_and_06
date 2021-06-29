@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   given_main.c                                       :+:      :+:    :+:   */
+/*   main_with_printf_and_comments.c                    :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: charmstr <charmstr@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/06/26 20:19:59 by charmstr          #+#    #+#             */
-/*   Updated: 2021/06/27 05:51:27 by charmstr         ###   ########.fr       */
+/*   Updated: 2021/06/29 06:22:41 by charmstr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -98,19 +98,6 @@ char *str_join(char *buf, char *add)
 	return (newbuf);
 }
 
-char *fd_strdup(const char *str)
-{
-	char *new;
-
-	if (!(new = malloc (sizeof(char) * (strlen(str) + 1))))
-		fatal_error();
-	int i = strlen(str);
-	new[i] = '\0';
-	while (--i >= 0)
-		new[i] = str[i];
-	return (new);
-}
-
 //sets up the socket for the server, return -1 if failure.
 int	set_up_server_socket(int port)
 {
@@ -172,6 +159,8 @@ void	push_front_new_client(t_list **clients, int fd, int id)
 	new_client->fd = fd;
 	new_client->id = id;
 	new_client->next = *clients;
+	if (*clients)
+		(*clients)->previous = new_client;
 	*clients = new_client;
 }
 
@@ -294,24 +283,27 @@ void resume_reading_from_clients(t_fd_sets *real_set, t_fd_sets *copy, t_list **
 				char intro_buffer[100];
 				sprintf(intro_buffer, "server: client %d just left\n", current_client->id);
 				add_msg_to_all_other_clients(intro_buffer, current_client->fd, *clients);
-				//store next.
-				t_list *next_client = current_client->next;
-				//need to update the next of previous, if existing, or the list head itself
+				//store the next client
+				t_list * const next = current_client->next;
+
+				if (next)
+					next->previous = current_client->previous;
 				if (current_client->previous)
-					current_client->previous->next = next_client;
+					current_client->previous->next = next;
 				else
-					*clients = next_client;  //the reason why we needed a double pointer here.
+					*clients = next;
+
 				free(current_client->queued_msgs);
 				free(current_client->extracted_msg);
 				free(current_client);
-
-				current_client = next_client;
+				current_client = next;
 			}
 			else
 			{ //append the read message, to the message to write in each client.
 				char *composed_msg;
 				composed_msg = compose_message_to_send_to_others(res, buffer, current_client->id);
 				add_msg_to_all_other_clients(composed_msg, current_client->fd, *clients);
+				free(composed_msg);
 
 				current_client = current_client->next;
 			}
@@ -375,6 +367,17 @@ void resume_writing_to_clients(t_fd_sets copy, t_list *clients)
 	}
 }
 
+void debug_clients(t_list *clients)
+{
+	while (clients)
+	{
+		printf("client id: %d\n", clients->id);
+		printf("\tqueue_msgs: |%s|\n", clients->queued_msgs);
+		printf("\textracted_msg: |%s|\n", clients->extracted_msg);
+		clients = clients->next;
+	}
+}
+
 int main(int argc, char **argv)
 {
 	int sockfd;
@@ -409,6 +412,8 @@ int main(int argc, char **argv)
 		try_to_accept_new_clients(sockfd, &clients, fd_sets_copy, &fd_sets_real);
 
 		resume_reading_from_clients(&fd_sets_real, &fd_sets_copy, &clients);
+
+		debug_clients(clients);
 
 		resume_writing_to_clients(fd_sets_copy, clients);
 	}

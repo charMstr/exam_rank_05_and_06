@@ -6,7 +6,7 @@
 /*   By: charmstr <charmstr@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/06/26 20:19:59 by charmstr          #+#    #+#             */
-/*   Updated: 2021/06/27 06:23:12 by charmstr         ###   ########.fr       */
+/*   Updated: 2021/06/29 06:10:55 by charmstr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -81,19 +81,6 @@ char *str_join(char *buf, char *add)
 	return (newbuf);
 }
 
-char *fd_strdup(const char *str)
-{
-	char *new;
-
-	if (!(new = malloc (sizeof(char) * (strlen(str) + 1))))
-		fatal_error();
-	int i = strlen(str);
-	new[i] = '\0';
-	while (--i >= 0)
-		new[i] = str[i];
-	return (new);
-}
-
 int	set_up_server_socket(int port)
 {
 	int sockfd, connfd, len;
@@ -146,6 +133,8 @@ void	push_front_new_client(t_list **clients, int fd, int id)
 	new_client->fd = fd;
 	new_client->id = id;
 	new_client->next = *clients;
+	if (*clients)
+		(*clients)->previous = new_client;
 	*clients = new_client;
 }
 
@@ -252,21 +241,24 @@ void resume_reading_from_clients(t_fd_sets *real_set, t_fd_sets *copy, t_list **
 				char intro_buffer[100];
 				sprintf(intro_buffer, "server: client %d just left\n", current_client->id);
 				add_msg_to_all_other_clients(intro_buffer, current_client->fd, *clients);
-				t_list *next_client = current_client->next;
+				t_list * const next = current_client->next;
+				if (next)
+					next->previous = current_client->previous;
 				if (current_client->previous)
-					current_client->previous->next = next_client;
+					current_client->previous->next = next;
 				else
-					*clients = next_client;
+					*clients = next;
 				free(current_client->queued_msgs);
 				free(current_client->extracted_msg);
 				free(current_client);
-				current_client = next_client;
+				current_client = next;
 			}
 			else
 			{
 				char *composed_msg;
 				composed_msg = compose_message_to_send_to_others(res, buffer, current_client->id);
 				add_msg_to_all_other_clients(composed_msg, current_client->fd, *clients);
+				free(composed_msg);
 				current_client = current_client->next;
 			}
 		}
