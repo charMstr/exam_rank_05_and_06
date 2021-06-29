@@ -6,7 +6,7 @@
 /*   By: charmstr <charmstr@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/06/26 20:19:59 by charmstr          #+#    #+#             */
-/*   Updated: 2021/06/29 06:10:55 by charmstr         ###   ########.fr       */
+/*   Updated: 2021/06/29 07:46:17 by charmstr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -158,7 +158,7 @@ void	add_msg_to_all_other_clients(char *latest_msg, int fd_to_avoid, t_list *cli
 	}
 }
 
-void try_to_accept_new_clients(int sockfd, t_list **clients, t_fd_sets copy, t_fd_sets *real)
+void try_to_accept_new_clients(t_fd_sets *real, t_fd_sets copy, t_list **clients, int sockfd)
 {
 	int connfd, len;
 	struct sockaddr_in cli;
@@ -219,14 +219,14 @@ char *compose_message_to_send_to_others(int len_buffer, const char *buffer, int 
 	return(msg_composed);
 }
 
-void resume_reading_from_clients(t_fd_sets *real_set, t_fd_sets *copy, t_list **clients)
+void resume_reading_from_clients(t_fd_sets *real_set, t_fd_sets copy, t_list **clients)
 {
 	char buffer[65535];
 	t_list *current_client = *clients;
 
 	while (current_client)
 	{
-		if (FD_ISSET(current_client->fd, &copy->fd_set_read))
+		if (FD_ISSET(current_client->fd, &copy.fd_set_read))
 		{
 			int res;
 			res = read(current_client->fd, buffer, 65535);
@@ -234,8 +234,6 @@ void resume_reading_from_clients(t_fd_sets *real_set, t_fd_sets *copy, t_list **
 				current_client = current_client->next;
 			else if (res == 0)
 			{
-				FD_CLR(current_client->fd, &copy->fd_set_read);
-				FD_CLR(current_client->fd, &copy->fd_set_write);
 				FD_CLR(current_client->fd, &real_set->fd_set_read);
 				FD_CLR(current_client->fd, &real_set->fd_set_write);
 				char intro_buffer[100];
@@ -327,8 +325,8 @@ int main(int argc, char **argv)
 		fd_sets_copy = fd_sets_real;
 		if (select(1024, &(fd_sets_copy.fd_set_read), &(fd_sets_copy.fd_set_write), &(fd_sets_copy.fd_set_excepts), NULL) < 0)
 			fatal_error();
-		try_to_accept_new_clients(sockfd, &clients, fd_sets_copy, &fd_sets_real);
-		resume_reading_from_clients(&fd_sets_real, &fd_sets_copy, &clients);
+		try_to_accept_new_clients(&fd_sets_real, fd_sets_copy, &clients, sockfd);
+		resume_reading_from_clients(&fd_sets_real, fd_sets_copy, &clients);
 		resume_writing_to_clients(fd_sets_copy, clients);
 	}
 }

@@ -6,7 +6,7 @@
 /*   By: charmstr <charmstr@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/06/26 20:19:59 by charmstr          #+#    #+#             */
-/*   Updated: 2021/06/29 06:22:41 by charmstr         ###   ########.fr       */
+/*   Updated: 2021/06/29 07:59:50 by charmstr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -185,7 +185,7 @@ void	add_msg_to_all_other_clients(char *latest_msg, int fd_to_avoid, t_list *cli
 }
 
 //will exit if failure
-void try_to_accept_new_clients(int sockfd, t_list **clients, t_fd_sets copy, t_fd_sets *real)
+void try_to_accept_new_clients(t_fd_sets *real, t_fd_sets copy, t_list **clients, int sockfd)
 {
 	int connfd, len;
 	struct sockaddr_in cli;
@@ -347,8 +347,25 @@ void resume_writing_to_clients(t_fd_sets copy, t_list *clients)
 		if (FD_ISSET(clients->fd, &copy.fd_set_write) \
 				&& (clients->queued_msgs || clients->extracted_msg))
 		{
-			//here the message to send needs to be truncated to the first '\n',
-			//otherwise the output of our binary and the tester's wont match
+			/*
+			** NOTE: here we could probably shortcut and directly use only one string:
+			**		clients->queued_msgs.
+			** and Never use at all the string clients->extracted_msg.
+			**
+			** But in the provided little main.c the function extract_message()
+			** is there and does a weird thing: it extracts the message up to
+			** the next (incuding it) '\n'. I assumed it was designed for
+			** preparing the next write, and not to extract the message from a
+			** call to read(), but i might be wrong.
+			**
+			** The outputs of our binary and the tester's are diffed, but the
+			** outputs are sorted in the first place. I noticed that the "sort"
+			** unix command does sort line by line, so writing a message
+			** containing multiple '\n' in one shot or line by line should not
+			** make any difference.
+			** Anyway, before sending the next message, i extract the firs line
+			** with this dumb function extract_message(), just in case...
+			*/
 			char **msg = chose_between_queued_msg_and_extracted_msg(clients);
 
 			res = write(clients->fd, *msg, strlen(*msg));
@@ -408,13 +425,16 @@ int main(int argc, char **argv)
 		printf("\nexited select: %d\n", i++);
 		sleep(1);
 
-		//call to accept
-		try_to_accept_new_clients(sockfd, &clients, fd_sets_copy, &fd_sets_real);
+		//step one, code:
+		try_to_accept_new_clients(&fd_sets_real, fd_sets_copy, &clients, sockfd);
 
+		// step three, code:
 		resume_reading_from_clients(&fd_sets_real, &fd_sets_copy, &clients);
 
+		//usefull each time you write a func here.
 		debug_clients(clients);
 
+		//step two, code:
 		resume_writing_to_clients(fd_sets_copy, clients);
 	}
 }
