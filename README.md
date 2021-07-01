@@ -1,92 +1,63 @@
-# exam rank 06 @42
+# Exam rank 06 @42
 
-## intro:
-This solution should answer to the exam rank 06 of school 42.
-See subject attached.
+## Intro:
+This solution is my answer to the exam rank 06 of school 42 (See subject
+attached).
+
+## Implementation details:
+This implementation takes pride in never calling more than once read() or
+write() after select() returns for a given filedescriptor. Also it doesn't use
+any global variables, or overly large static buffers.
 
 This solution takes in account the fact that messages dont necessarily get sent
-successfullly in one shot on the network.
+successfullly in one shot on the network with a call to write().
 
-## different files:
-The file given_main.c is provided when starting the exam.
+The only "shorcut" taken, is calling exit() without freeing the clients list,
+and whatever it contains, not even closing open filedescriptors. The OS will
+do that for us, and if we wanted to handle all this gracefully we should also
+take care of the situation of a signla being sent to our program, which we cant
+(signal() and alike functions not allowed...).
 
-This program is about 342 lines when all the printfs and comments are stripped
-off (see main.c).
+## Global architecture
 
-A version called main_with_printfs_and_comments.c has kept the remaining calls
-to printf() and sleep() and have kept the comments, for the sake of clarity.
+### architecture from a bird's-eye view:
 
-## more explanations:
-In this exercice, we are writing a server that should allow clients to connect,
-and forward any received message from a client, to all the other connected
-clients. There is no content-length, or chunk-encoding or likewise
-implementation of such a protocol that could allow us to know the length of the
-message we are going to receive. The only hint we have is the given\_main.c
-given as start to get inspired, and it contains the function `extract\_message()`
-already implemented:
+1. set up server. It sets up fd ```int sockfd```.
+2. enter infinite while loop:
+	1. call to ```select()```.
+	2. try to accept new clients trying to connect to ```sockfd```
+	3. loop over clients and try to read.
+	4. loop over clients and try to write.
+
+### architecture from the "jobs" perpective:
+
+When the server receives a new stream of bytes from a client, it stores it in
+the ```char *queue``` variable for that client.
+
+Then this queue variable is broken down in messages ready to be sent (lines
+ending with a '\n'). Each  message ready to be sent, aka message, is allocated
+once and only once for all the others clients to use it. There is a reference
+counter that allows us to know when there is no more client using this message.
+Both those variable are stored into a type t_job (see below). Each client will
+receive a "job", pushed onto its list of jobs.
 
 ```
-int extract_message(char **buf, char **msg)
+typedef struct s_job
 {
-	char	*newbuf;
-	int	i;
-
-	*msg = 0;
-	if (*buf == 0)
-		return (0);
-	i = 0;
-	while ((*buf)[i])
-	{
-		if ((*buf)[i] == '\n')
-		{
-			newbuf = calloc(1, sizeof(*newbuf) * (strlen(*buf + i + 1) + 1));
-			if (newbuf == 0)
-				return (-1); 
-			strcpy(newbuf, *buf + i + 1);
-			*msg = *buf;
-			(*msg)[i + 1] = 0;
-			*buf = newbuf;
-			return (1);
-		}
-		i++;
-	}
-	return (0);
-}
+	char *msg;
+	int position_in_msg;
+	int *nb_references;
+	struct s_job *next;
+} t_job;
 ```
 
-The school checker seems to connect a few clients, then send messages and do a
-sort at the end of the pipe. ```... | sort ``` then all this is "diffed"
-The best way to make sure the outputs will remain the same with the checker,in
-case some sort of `usleep()` calls are made between each write, and the binary is
-then killed half way, is to use the given function. So we will break down our
-calls to write() the same way, using `extract_message()` even if its completely dumb.
+## Tips:
 
-## t_list structure:
-The essential of the logic can be understood in the structure t\_list:
+The function extract_message() propvided at the start of the exam is reused as
+is, except for the call to function ```fatal()``` if it fails.
 
-````
-typedef struct s_list
-{
-	int fd;
-	int id;
-	char *queued_msgs;
-	char *extracted_msg;
-	struct s_list *next;
-	struct s_list *previous;
-}			t_list;
-````
+The function provided and named ```str_join()``` is modified the same way, and
+it also doesnt do any free() calls on its parameters.
 
-Each link of type t\_list represents a client connected to the server.
-
-- `fd`: It stores the fd of the connexion socket with this specific client.
-- `id`: It stores the client's id.
-- `queued_msgs`: It stores the messages to be sent for a specific client. Any new
-message is appended to this string.
-- `extracted_msg`: It is the destination where we extract the next message from
-- `queued_msgs`. The next message being the next line up to a '\n'.
-
-**NOTE1: if no '\n' is found, we directly atempt to write `queued_msgs`.**
-
-**NOTE2: each time `extracted_msg` or `queued_msgs` is fully written it is freed and
-reset to NULL. If its not fully sent over the network, we simply shift the bytes
-it contains with `ft_memmove()`**
+Do call write() after read(), so it prevents from trying to write in a fd that
+actually just got closed.
